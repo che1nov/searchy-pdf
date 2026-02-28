@@ -6,8 +6,7 @@ import threading
 from http.server import ThreadingHTTPServer
 
 import pytest
-
-requests = pytest.importorskip("requests")
+import requests
 
 from indexer import DocumentEntry, IndexData
 from search_engine import SearchEngine

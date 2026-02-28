@@ -129,6 +129,42 @@ def test_build_or_load_updates_modified_file(monkeypatch, tmp_path: Path) -> Non
     assert "new" in new_doc.token_counts
 
 
+def test_build_or_load_skips_changed_file_when_extract_returns_none(
+    monkeypatch, tmp_path: Path
+) -> None:
+    docs_dir = tmp_path / "data"
+    file_path = docs_dir / "doc1.pdf"
+    _create_pdf_file(file_path, "old")
+
+    logger = DummyLogger()
+    index_file = tmp_path / "index.pkl"
+
+    old_doc = DocumentEntry(
+        file=file_path.name,
+        path=str(file_path.resolve()),
+        mtime=1.0,
+        size=1,
+        token_counts={"old": 1},
+        total_terms=1,
+    )
+    old_index = IndexData(
+        documents={old_doc.path: old_doc},
+        idf={"old": 1.0},
+        doc_vectors={old_doc.path: {"old": 1.0}},
+        doc_norms={old_doc.path: 1.0},
+        built_at=1.0,
+    )
+    with index_file.open("wb") as fh:
+        pickle.dump(old_index, fh)
+
+    monkeypatch.setattr("indexer.extract_pdf_text", lambda _p, _l: None)
+
+    indexer = Indexer([docs_dir], index_file, logger)
+    result = indexer.build_or_load_index()
+
+    assert result.documents == {}
+
+
 def test_build_or_load_handles_removed_file(monkeypatch, tmp_path: Path) -> None:
     docs_dir = tmp_path / "data"
     docs_dir.mkdir(parents=True, exist_ok=True)

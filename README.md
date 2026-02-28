@@ -85,6 +85,147 @@ Returns:
 }
 ```
 
+## Future REST API Specification (`apispec` branch)
+
+This section describes planned endpoints for the next iteration of the project.
+
+### Base URL
+
+`http://127.0.0.1:8000/api/v1`
+
+### `GET /health`
+
+Checks service availability.
+
+Response `200 OK`:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### `POST /documents/index`
+
+Starts or refreshes PDF indexing.
+
+Request body:
+
+```json
+{
+  "directories": ["./data", "./more_docs"],
+  "force_rebuild": false
+}
+```
+
+Response `202 Accepted`:
+
+```json
+{
+  "task_id": "idx_20260301_0001",
+  "status": "accepted"
+}
+```
+
+### `GET /documents`
+
+Returns indexed documents with pagination.
+
+Query params:
+
+- `limit` (optional, default `20`, max `100`)
+- `offset` (optional, default `0`)
+
+Response `200 OK`:
+
+```json
+{
+  "total": 2,
+  "items": [
+    {
+      "id": "doc_1",
+      "file": "doc1.pdf",
+      "path": "/abs/path/data/doc1.pdf",
+      "tokens_count": 1834,
+      "updated_at": "2026-03-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+### `GET /documents/{document_id}`
+
+Returns metadata for one document.
+
+Response `200 OK`:
+
+```json
+{
+  "id": "doc_1",
+  "file": "doc1.pdf",
+  "path": "/abs/path/data/doc1.pdf",
+  "tokens_count": 1834,
+  "updated_at": "2026-03-01T00:00:00Z"
+}
+```
+
+Response `404 Not Found`:
+
+```json
+{
+  "error": "document_not_found"
+}
+```
+
+### `DELETE /documents/{document_id}`
+
+Removes a document from the index.
+
+Response `204 No Content`.
+
+### `GET /search`
+
+Searches indexed documents by query string.
+
+Query params:
+
+- `q` (required, non-empty string)
+- `limit` (optional, default `10`, max `50`)
+- `min_score` (optional, float between `0` and `1`)
+
+Response `200 OK`:
+
+```json
+{
+  "query": "machine learning",
+  "total": 1,
+  "items": [
+    {
+      "document_id": "doc_1",
+      "file": "doc1.pdf",
+      "path": "/abs/path/data/doc1.pdf",
+      "score": 0.823114
+    }
+  ]
+}
+```
+
+### Common error response
+
+All endpoints return structured errors:
+
+```json
+{
+  "error": "validation_error",
+  "message": "q is required",
+  "details": {
+    "field": "q"
+  }
+}
+```
+
+Planned status codes: `400`, `404`, `409`, `422`, `500`.
+
 ## Testing and Coverage
 
 Install dev dependencies:

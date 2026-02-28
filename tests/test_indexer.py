@@ -1,8 +1,6 @@
 import pickle
 from pathlib import Path
 
-import pytest
-
 from indexer import DocumentEntry, IndexData, Indexer, _compute_idf, _tokenize_to_counts
 
 

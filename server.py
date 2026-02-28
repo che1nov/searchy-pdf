@@ -17,15 +17,20 @@ LOGGER = logging.getLogger("search_service")
 
 
 class SearchRequestHandler(BaseHTTPRequestHandler):
-    """HTTP handler exposing GET /search endpoint."""
+    """HTTP handler exposing health and search endpoints."""
 
     engine: SearchEngine
     logger: logging.Logger
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        path = parsed.path
 
-        if parsed.path != "/search":
+        if path in ("/health", "/api/v1/health"):
+            self._send_json(HTTPStatus.OK, {"status": "ok"})
+            return
+
+        if path not in ("/search", "/api/v1/search"):
             self._send_json(
                 HTTPStatus.NOT_FOUND,
                 {"error": "Not found", "message": "Use GET /search?q=<text>"},
@@ -42,8 +47,18 @@ class SearchRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        limit_raw = (query_params.get("limit") or ["10"])[0].strip()
         try:
-            results = self.engine.search(query, limit=10)
+            limit = max(1, min(int(limit_raw), 50))
+        except ValueError:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "Invalid query parameter 'limit'"},
+            )
+            return
+
+        try:
+            results = self.engine.search(query, limit=limit)
         except Exception as exc:
             self.logger.exception("Search failed for query: %s", query)
             self._send_json(
@@ -52,12 +67,15 @@ class SearchRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        items = [
+            {"file": item.file, "path": item.path, "score": item.score}
+            for item in results
+        ]
         response_payload = {
             "query": query,
-            "results": [
-                {"file": item.file, "path": item.path, "score": item.score}
-                for item in results
-            ],
+            "total": len(items),
+            "items": items,
+            "results": items,
         }
         self._send_json(HTTPStatus.OK, response_payload)
 

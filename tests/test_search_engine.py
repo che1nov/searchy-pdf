@@ -95,3 +95,45 @@ def test_search_skips_non_positive_dot_product() -> None:
     engine = SearchEngine(index)
 
     assert engine.search("alpha") == []
+
+
+def test_search_returns_empty_when_query_norm_is_zero() -> None:
+    doc = DocumentEntry(
+        file="doc.pdf",
+        path="/tmp/doc.pdf",
+        mtime=1.0,
+        size=10,
+        token_counts={"alpha": 1},
+        total_terms=1,
+    )
+    index = IndexData(
+        documents={doc.path: doc},
+        idf={"alpha": 0.0},
+        doc_vectors={doc.path: {"alpha": 1.0}},
+        doc_norms={doc.path: 1.0},
+        built_at=1.0,
+    )
+    engine = SearchEngine(index)
+
+    assert engine.search("alpha") == []
+
+
+def test_search_skips_non_positive_score_after_normalization() -> None:
+    doc = DocumentEntry(
+        file="doc.pdf",
+        path="/tmp/doc.pdf",
+        mtime=1.0,
+        size=10,
+        token_counts={"alpha": 1},
+        total_terms=1,
+    )
+    index = IndexData(
+        documents={doc.path: doc},
+        idf={"alpha": 1.0},
+        doc_vectors={doc.path: {"alpha": 1.0}},
+        doc_norms={doc.path: -1.0},
+        built_at=1.0,
+    )
+    engine = SearchEngine(index)
+
+    assert engine.search("alpha") == []

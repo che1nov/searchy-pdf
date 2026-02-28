@@ -26,6 +26,25 @@ index_file: ./cache/index.pkl
     assert cfg.index_file == (tmp_path / "cache/index.pkl").resolve()
 
 
+def test_load_config_success_with_absolute_paths(tmp_path: Path) -> None:
+    data_dir = (tmp_path / "abs_data").resolve()
+    index_file = (tmp_path / "abs_index.pkl").resolve()
+    config_file = tmp_path / "config.yml"
+    config_file.write_text(
+        f"""
+directories:
+  - {data_dir}
+index_file: {index_file}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    cfg = load_config(config_file)
+
+    assert cfg.directories == [data_dir]
+    assert cfg.index_file == index_file
+
+
 def test_load_config_missing_file_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         load_config(tmp_path / "missing.yml")

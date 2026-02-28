@@ -218,3 +218,51 @@ def test_save_index_writes_atomically(tmp_path: Path) -> None:
 
     assert index_file.exists()
     assert not index_file.with_suffix(index_file.suffix + ".tmp").exists()
+
+
+def test_build_index_from_scratch_skips_unreadable_file(monkeypatch, tmp_path: Path) -> None:
+    docs_dir = tmp_path / "data"
+    file_path = docs_dir / "bad.pdf"
+    _create_pdf_file(file_path)
+
+    monkeypatch.setattr("indexer.extract_pdf_text", lambda _p, _l: None)
+    logger = DummyLogger()
+    indexer = Indexer([docs_dir], tmp_path / "index.pkl", logger)
+
+    result = indexer.build_or_load_index()
+
+    assert result.documents == {}
+
+
+def test_discover_pdf_files_ignores_non_file_entries(tmp_path: Path) -> None:
+    logger = DummyLogger()
+    docs_dir = tmp_path / "data"
+    fake_pdf_dir = docs_dir / "nested.pdf"
+    fake_pdf_dir.mkdir(parents=True, exist_ok=True)
+    real_pdf = docs_dir / "real.pdf"
+    _create_pdf_file(real_pdf)
+
+    indexer = Indexer([docs_dir], tmp_path / "index.pkl", logger)
+    files = indexer._discover_pdf_files()
+
+    assert files == [real_pdf.resolve()]
+
+
+def test_rebuild_model_skips_tokens_absent_in_idf(monkeypatch, tmp_path: Path) -> None:
+    logger = DummyLogger()
+    indexer = Indexer([tmp_path], tmp_path / "index.pkl", logger)
+    doc = DocumentEntry(
+        file="doc.pdf",
+        path=str((tmp_path / "doc.pdf").resolve()),
+        mtime=1.0,
+        size=1,
+        token_counts={"alpha": 1},
+        total_terms=1,
+    )
+    monkeypatch.setattr("indexer._compute_idf", lambda _documents: {})
+
+    result = indexer._rebuild_model({doc.path: doc})
+
+    assert result.idf == {}
+    assert result.doc_vectors == {}
+    assert result.documents == {}

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.pycache/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Runtime artifacts
+index.pkl
+*.tmp
